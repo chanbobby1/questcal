@@ -9,7 +9,6 @@ function loadedGAPI() {
 		console.log('loaded.');
 	});
 	gapi.client.setApiKey(GOOGLEAPPS_API_KEY);
-	auth();
 }
 
 // Convert Date object to RFC3339 Format
@@ -32,8 +31,6 @@ function auth() {
 		'scope': 'https://www.googleapis.com/auth/calendar'
 	};
 	gapi.auth.authorize(config, function () {
-		console.log('login complete');
-		console.log(gapi.auth.getToken());
 		QuestCal.init();
 	});
 }
@@ -256,17 +253,16 @@ var QuestCal = {
 	},
 	
 	openGoogleCalWindow: function() {
-		$("#addToCal").parent().append("<a id=\"googleCalLink\" href=\"http://www.google.com/calendar/\" target=\"_blank\"></a>");
-		
-		$("#googleCalLink")[0].click(); 
+		window.open("http://www.google.com/calendar/", "_target");
 	},
 
 	setupButton: function() {
-		var button = $("span.SSSBUTTON_ACTIONLINK").clone();
-		button.attr("title", "Add to Google Calendar").attr("id", "addToCal");
-		button.find("a").removeAttr("id").attr("href", "javascript:auth()").text("Add to Google Calendar");
+		var $buttons = $("span.SSSBUTTON_ACTIONLINK").css("display", "inline-block")
+		var $button = $buttons.clone();
+		$button.attr("title", "Add to Google Calendar").attr("id", "addToCal");
+		$button.find("a").removeAttr("id").attr("href", "javascript:auth()").text("Add to Google Calendar");
 		
-		$("span.SSSBUTTON_ACTIONLINK").parent().append(button);
+		$("span.SSSBUTTON_ACTIONLINK").parent().append($button);
 	}
 };
 
