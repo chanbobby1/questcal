@@ -1,8 +1,8 @@
 {
-    "name": "UW Quest Calendar",
-    "version": "0.2",
-    "manifest_version": 2,
-    "description": "Adds a button to UW Quest that allows a user to export their class schedule.",
+  "name": "UW Quest Calendar",
+  "version": "0.3",
+  "manifest_version": 2,
+  "description": "Adds a button to UW Quest that allows a user to export their class schedule.",
 	"icons": {
 		"16" : "icon16.png",
 		"48" : "icon48.png",
@@ -13,20 +13,23 @@
 	],
 	"web_accessible_resources": [
 		"jquery.js",
+    "moment.min.js",
+    "bootstrap.min.css",
 		"uwquestcal_lib.js"
 	],
-    "content_scripts": [
-	{
-        "matches": [
-			"https://quest.pecs.uwaterloo.ca/psc/SS/ACADEMIC/SA/c/SA_LEARNER_SERVICES.SSR_SSENRL_LIST.GBL*"
-        ],
+  "content_scripts": [{
+    "matches": [
+      "https://quest.pecs.uwaterloo.ca/psc/SS/ACADEMIC/SA/c/SA_LEARNER_SERVICES.SSR_SSENRL_LIST.GBL?Page=SSR_SSENRL_LIST*"
+    ],
 		"all_frames": true,
-        "css": [
-		],
-        "js": [
-			"jquery.js", 
+    "css": [
+		  "bootstrap.min.css"
+    ],
+    "js": [
+			"jquery.js",
+      "moment.min.js",
 			"uwquestcal_loader.js"
 		],
 		"run_at": "document_end"
-    }]
+  }]
 }

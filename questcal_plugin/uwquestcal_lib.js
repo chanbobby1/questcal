@@ -37,38 +37,38 @@ function auth() {
 
 var QuestCal = {
 	schedule: [],
-	
+
 	init: function () {
 		this.parseSchedule();
 		this.addClassScheduleToGoogleCal();
 	},
-	
+
 	createClass: function(courseTitle, section, component, daysTimes, startEndDate, location, instructor) {
 		return {
-			courseTitle: courseTitle, 
-			section: section, 
-			component: component, 
-			daysTimes: daysTimes, 
-			startEndDate: startEndDate, 
-			location: location, 
+			courseTitle: courseTitle,
+			section: section,
+			component: component,
+			daysTimes: daysTimes,
+			startEndDate: startEndDate,
+			location: location,
 			instructor: instructor
 		};
 	},
-	
+
 	convertClassToGoogleCalResource: function(courseClass) {
 		var title = courseClass.courseTitle.split(" - ")[0];
 		var classTitle = title + " " + courseClass.component + " - " + courseClass.section;
-		
+
 		var daysTimes = courseClass.daysTimes;
-		
+
 		var days = (daysTimes.split(" ")[0]).match(/([A-Z][a-z]?)/g);
-		
+
 		var times12Hrs = daysTimes.match(/(\d{1,2}:\d{2}(AM|PM))/g);
-		
+
 		var times = [];
-		
+
 		if(typeof times12Hrs != "undefined" && times12Hrs != null && times12Hrs.length > 0) {
-			
+
 			// Change from 12hr clock times (AM, PM) to 24hr times
 			for(var i = 0; i < times12Hrs.length; i++) {
 				var time = times12Hrs[i];
@@ -84,14 +84,14 @@ var QuestCal = {
 					times12Hrs[i] = hrs+":"+min;
 				}
 			}
-			
+
 			times = times12Hrs;
 		} else {
 			var times24Hrs = daysTimes.match(/(\d{1,2}:\d{2})/g);
-		
+
 			times = times24Hrs;
 		}
-		
+
 		// Convert date from Quest format to RRULE format.
 		for(var i = 0; i < days.length; i++) {
 			var day = days[i];
@@ -111,19 +111,14 @@ var QuestCal = {
 				days[i] = "SU";
 			}
 		}
-		
-		var rawStartDate = courseClass.startEndDate.split(" - ")[0];
-		var rawEndDate = courseClass.startEndDate.split(" - ")[1];
-		
-		var startDate = new Date(rawStartDate);
-		var endDate = new Date(rawEndDate);
-		endDate.setHours(23);
-		endDate.setMinutes(59);
-		endDate.setSeconds(59);
-		console.log(endDate);
-		var oneTimeEvent = (rawStartDate == rawEndDate);
-		
-		var startDateTime = new Date(rawStartDate + " " + times[0]);
+
+		var rawTermStartDate = courseClass.startEndDate.split(" - ")[0];
+		var rawTermEndDate = courseClass.startEndDate.split(" - ")[1];
+
+		var termStartDate = moment(rawTermStartDate, "DD/MM/YYYY");
+		var termEndDate = moment(rawTermEndDate, "DD/MM/YYYY").endOf("day");
+		var oneTimeEvent = (rawTermStartDate == rawTermEndDate);
+		var startDateTime = moment(rawTermStartDate + " " + times[0], "DD/MM/YYYY HH:mm");
 		var startDayNum = 0;
 		if(days[0] == "MO") {
 			startDayNum = 1;
@@ -140,24 +135,24 @@ var QuestCal = {
 		} else if(days[0] == "SU") {
 			startDayNum = 0;
 		}
-		console.log(classTitle + ": " + startDayNum + " - " +startDateTime.getDay());
+		console.log(classTitle + ": " + startDayNum + " - " +startDateTime.date());
 		// Adjust from the start day of the term (eg Monday) to the class start day(eg. Tuesday)
-		startDateTime.setDate(startDateTime.getDate() + (startDayNum - startDateTime.getDay()));
-		
-		var endDateTime = new Date(rawStartDate + " " + times[1]);
-		
+		startDateTime.day(startDayNum);
+
+		var endDateTime = moment(rawTermStartDate + " " + times[1], "DD/MM/YYYY HH:mm");
+
 		// Adjust from the start day of the term (eg Monday) to the class start day(eg. Tuesday)
-		endDateTime.setDate(endDateTime.getDate() + (startDayNum - endDateTime.getDay()));
-		
+		endDateTime.day(startDayNum);
+
 		var googleCalResource = {
 			"summary": classTitle,
 			"location": courseClass.location.replace(/\s+/g, " "),
 			"start": {
-				"dateTime": ISODateString(startDateTime),
+				"dateTime": ISODateString(startDateTime.toDate()), //startDateTime.format("YYYY-MM-DDTHH:mm:ssZ"),
 				"timeZone": "America/Toronto"
 			},
 			"end": {
-				"dateTime": ISODateString(endDateTime),
+				"dateTime": ISODateString(endDateTime.toDate()), //endDateTime.format("YYYY-MM-DDTHH:mm:ssZ"),
 				"timeZone": "America/Toronto"
 			},
 			"description" : DEFAULT_DESCRIPTION,
@@ -169,14 +164,14 @@ var QuestCal = {
 				"useDefault": "false"
 			}
 		};
-		
+
 		if(!oneTimeEvent) {
-			googleCalResource.recurrence = ["RRULE:FREQ=WEEKLY;UNTIL="+ISODateStringWithoutSeparators(endDate)+";WKST=SU;BYDAY=" + days.join(",")];
+			googleCalResource.recurrence = ["RRULE:FREQ=WEEKLY;UNTIL="+ISODateStringWithoutSeparators(termEndDate.toDate())+";WKST=SU;BYDAY=" + days.join(",")];
 		}
-		
+
 		return googleCalResource;
 	},
-	
+
 	parseSchedule: function () {
 		$(".PSGROUPBOXWBO").each(function () {
 			var courseTable = $(this);
@@ -192,51 +187,52 @@ var QuestCal = {
 				var instructor = cmpt.find("td:eq(5) span").text();
 				var startEndDate = cmpt.find("td:eq(6) span").text();
 				if (component.trim().length > 0 && daysTimes.trim().length > 0 && enrollmentStatus == "Enrolled") {
-				
+
 					var classComponent = QuestCal.createClass(courseTitle, section, component, daysTimes, startEndDate, location, instructor);
+					console.log(classComponent);
 					QuestCal.schedule.push(classComponent);
 				}
 			});
 		});
-		
-		
+
+
 	},
 	addClassScheduleToGoogleCal: function () {
-		
+
 		QuestCal.insertNewCalendarToGoogleCal();
-		
+
 	},
 	// Create new calendar for the term.
 	insertNewCalendarToGoogleCal: function() {
 		var term = $("span.SSSPAGEKEYTEXT").text().split(" | ")[0];
-	
+
 		var newCalendar = {
 			'summary': term,
 			'description': DEFAULT_DESCRIPTION,
 			'timeZone': "America/Toronto"
 		};
-	
+
 		var request = gapi.client.calendar.calendars.insert({
 			'resource': newCalendar
 		});
-		
+
 		request.execute(function (resp) {
 			console.log(resp);
 			QuestCal.googleCalendarId = resp.id;
-			
+
 			// Insert each class schedule into new term calendar.
 			for(var i = 0; i < QuestCal.schedule.length; i++) {
 				var classSchedule = QuestCal.schedule[i];
 				var googleCalResource = QuestCal.convertClassToGoogleCalResource(classSchedule);
 				QuestCal.insertEventToGoogleCal(googleCalResource);
 			}
-			
+
 			QuestCal.openGoogleCalWindow();
 		});
 	},
 
 	insertEventToGoogleCal: function (eventResource) {
-		
+
 		var request = gapi.client.calendar.events.insert({
 			'calendarId': ((typeof QuestCal.googleCalendarId != "undefined")? QuestCal.googleCalendarId : 'primary'),
 			'resource': eventResource
@@ -251,18 +247,25 @@ var QuestCal = {
 			console.log("");
 		});
 	},
-	
+
 	openGoogleCalWindow: function() {
 		window.open("http://www.google.com/calendar/", "_target");
 	},
 
 	setupButton: function() {
-		var $buttons = $("span.SSSBUTTON_ACTIONLINK").css("display", "inline-block")
-		var $button = $buttons.clone();
-		$button.attr("title", "Add to Google Calendar").attr("id", "addToCal");
-		$button.find("a").removeAttr("id").attr("href", "javascript:auth()").text("Add to Google Calendar");
-		
-		$("span.SSSBUTTON_ACTIONLINK").parent().append($button);
+		var $button = $("<a></a>").text("Add to Google Calendar")
+			.attr({
+				"id": "addToCal",
+				"href": "javascript:;"
+			})
+			.css('margin-left', '15px')
+			.text("Add to Google Calendar")
+			.addClass('btn btn-info btn-xs')
+			.click(auth);
+
+		if ($("#DERIVED_REGFRM1_SS_TRANSACT_TITLE #addToCal").length === 0) {
+			$("#DERIVED_REGFRM1_SS_TRANSACT_TITLE").append($button);
+		}
 	}
 };
 
